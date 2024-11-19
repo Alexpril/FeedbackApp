@@ -1,0 +1,102 @@
+﻿@page "/dialogcard"
+@using BlazorFeedBackApp.Core.Repository
+@using BlazorFeedbackApp.DAL.Models
+@inject Radzen.DialogService dialogService
+@inject IFeedbackRepository repository
+@inject NotificationService notificationService
+
+<RadzenCard Style="padding: 20px; max-width: 600px; margin: auto;">
+    <RadzenTemplateForm TItem="Feedback" Data="@feedback" Submit="@Submit">
+        <RadzenStack Gap="1.5rem">
+            <RadzenText TextStyle="TextStyle.H5" TagName="TagName.H2" Class="rz-mb-4">
+                Leave Your Feedback
+            </RadzenText>
+
+            <RadzenStack Gap="0.5rem">
+                <RadzenLabel Text="Your Name" Component="CustomerName" />
+                <RadzenTextBox Name="CustomerName"
+                               @bind-Value="@feedback.CustomerName"
+                               Style="width: 100%"
+                               Placeholder="Enter your name..."
+                               Class="rz-mb-1" />
+                <RadzenRequiredValidator Component="CustomerName"
+                                         Text="Name is required"
+                                         Style="position: absolute" />
+            </RadzenStack>
+
+            <RadzenStack Gap="0.5rem">
+                <RadzenLabel Text="Your Feedback" Component="FeedbackMessage" />
+                <RadzenTextArea Name="FeedbackMessage"
+                                @bind-Value="@feedback.FeedbackMessage"
+                                Style="width: 100%"
+                                Rows="5"
+                                Placeholder="Share your thoughts..."
+                                Class="rz-mb-1" />
+                <RadzenRequiredValidator Component="FeedbackMessage"
+                                         Text="Feedback message is required"
+                                         Style="position: absolute" />
+            </RadzenStack>
+
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         JustifyContent="JustifyContent.End"
+                         Gap="1rem"
+                         Class="rz-mt-4">
+                @if (ShowClose)
+                {
+                    <RadzenButton Click="@(() => dialogService.Close(false))"
+                                  Text="Cancel"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Size="ButtonSize.Medium"
+                                  Variant="Variant.Flat" />
+                }
+                <RadzenButton ButtonType="ButtonType.Submit"
+                              Text="Submit Feedback"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Size="ButtonSize.Medium"
+                              Icon="send" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenTemplateForm>
+</RadzenCard>
+
+@code {
+    [Parameter] public bool ShowClose { get; set; } = true;
+    private Feedback feedback { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        // Initialize any default values if needed
+        feedback.CustomerName = string.Empty;
+        feedback.FeedbackMessage = string.Empty;
+    }
+
+    async Task Submit()
+    {
+        try
+        {
+            await repository.AddFeedbackAsync(feedback);
+
+            // Show success notification
+            notificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Success",
+                    Detail = "Thank you for your feedback!",
+                    Duration = 4000
+                });
+
+            dialogService.Close(true);
+        }
+        catch (Exception ex)
+        {
+            // Show error notification
+            notificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = "There was an error submitting your feedback. Please try again.",
+                    Duration = 4000
+                });
+        }
+    }
+}

@@ -1,0 +1,218 @@
+﻿@page "/manage-feedback"
+@attribute [Authorize(Policy = "RequireAuthentication")]
+
+@using BlazorFeedBackApp.Core.Repository
+@using BlazorFeedbackApp.DAL.Models
+@using Microsoft.AspNetCore.Authorization
+
+@inject IFeedbackRepository feedbackRepository
+@inject DialogService dialogService
+
+<h3>Customer Feedback</h3>
+
+<RadzenCard Variant="Variant.Outlined" class="rz-my-4">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+        <div>Edit Mode:</div>
+        <RadzenSelectBar @bind-Value="@editMode" TextProperty="Text" ValueProperty="Value"
+                         Data="@(Enum.GetValues(typeof(DataGridEditMode)).Cast<DataGridEditMode>().Select(t => new { Text = $"{t}", Value = t }))"
+                         Size="ButtonSize.Small"
+                         Disabled="@(editMode == DataGridEditMode.Multiple && feedbacksToInsert.Count() > 1)" />
+    </RadzenStack>
+</RadzenCard>
+
+<RadzenDataGrid @ref="feedbackGrid"
+                AllowFiltering="true"
+                AllowPaging="true"
+                PageSize="10"
+                AllowSorting="true"
+                EditMode="@editMode"
+                Data="@feedbacks"
+                TItem="Feedback"
+                RowUpdate="@OnUpdateRow"
+                RowCreate="@OnCreateRow">
+    <HeaderTemplate>
+        <RadzenButton ButtonStyle="ButtonStyle.Success"
+                      Icon="add_circle"
+                      Text="Add New Feedback"
+                      Click="@InsertRow"
+                      Disabled="@(editMode == DataGridEditMode.Single && feedbacksToInsert.Count() > 0)" />
+    </HeaderTemplate>
+    <Columns>
+        <RadzenDataGridColumn Property="@nameof(Feedback.FeedbackID)"
+                              Title="ID"
+                              Width="70px"
+                              TextAlign="TextAlign.Center"
+                              Frozen="true" />
+
+        <RadzenDataGridColumn Property="@nameof(Feedback.CustomerName)" Title="Customer Name">
+            <EditTemplate Context="feedback">
+                <RadzenTextBox @bind-Value="feedback.CustomerName"
+                               Style="width:100%; display: block"
+                               Name="CustomerName"
+                               MaxLength="100" />
+                <RadzenRequiredValidator Text="Customer Name is required"
+                                         Component="CustomerName"
+                                         Popup="true" />
+                <RadzenLengthValidator Text="Customer Name must be less then 100 characters"
+                                       Component="CustomerName"
+                                       Min="1"
+                                       Max="100"
+                                       Popup="true" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn Property="@nameof(Feedback.FeedbackMessage)" Title="Feedback Message">
+            <EditTemplate Context="feedback">
+                <RadzenTextArea @bind-Value="feedback.FeedbackMessage"
+                                Style="width:100%; display: block"
+                                Name="FeedbackMessage"
+                                Rows="4"
+                                MaxLength="500" />
+                <RadzenRequiredValidator Text="Feedback Message is required"
+                                         Component="FeedbackMessage"
+                                         Popup="true" />
+                <RadzenLengthValidator Text="Feedback Message must be less then 500 characters"
+                                       Component="FeedbackMessage"
+                                       Min="1"
+                                       Max="500"
+                                       Popup="true" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn Property="@nameof(Feedback.DateSubmitted)" Title="Date Submited">
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn Context="feedback"
+                              Filterable="false"
+                              Sortable="false"
+                              TextAlign="TextAlign.Center"
+                              Width="150px">
+            <Template Context="feedback">
+                <RadzenButton Icon="edit"
+                              ButtonStyle="ButtonStyle.Light"
+                              Variant="Variant.Flat"
+                              Size="ButtonSize.Medium"
+                              Click="@(args => EditRow(feedback))"
+                              @onclick:stopPropagation="true">
+                </RadzenButton>
+                <RadzenButton ButtonStyle="ButtonStyle.Danger"
+                              Icon="delete"
+                              Variant="Variant.Flat"
+                              Size="ButtonSize.Medium"
+                              Class="rz-my-1 rz-ms-1"
+                              Click="@(args => DeleteRow(feedback))"
+                              @onclick:stopPropagation="true">
+                </RadzenButton>
+            </Template>
+            <EditTemplate Context="feedback">
+                <RadzenButton Icon="check"
+                              ButtonStyle="ButtonStyle.Success"
+                              Variant="Variant.Flat"
+                              Size="ButtonSize.Medium"
+                              Click="@((args) => SaveRow(feedback))">
+                </RadzenButton>
+                <RadzenButton Icon="close"
+                              ButtonStyle="ButtonStyle.Light"
+                              Variant="Variant.Flat"
+                              Size="ButtonSize.Medium"
+                              Class="rz-my-1 rz-ms-1"
+                              Click="@((args) => CancelEdit(feedback))">
+                </RadzenButton>
+            </EditTemplate>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    RadzenDataGrid<Feedback> feedbackGrid;
+    List<Feedback> feedbacks = new();
+    DataGridEditMode editMode = DataGridEditMode.Single;
+    List<Feedback> feedbacksToInsert = new();
+    List<Feedback> feedbacksToUpdate = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetFeedbacks();
+    }
+
+    public async Task GetFeedbacks()
+    {
+        feedbacks = await feedbackRepository.GetFeedbackAsync();
+    }
+
+    void Reset()
+    {
+        feedbacksToInsert.Clear();
+        feedbacksToUpdate.Clear();
+    }
+
+    void Reset(Feedback feedback)
+    {
+        feedbacksToInsert.Remove(feedback);
+        feedbacksToUpdate.Remove(feedback);
+    }
+
+    async Task EditRow(Feedback feedback)
+    {
+        if (editMode == DataGridEditMode.Single && feedbacksToInsert.Count() > 0)
+        {
+            Reset();
+        }
+
+        feedbacksToUpdate.Add(feedback);
+        await feedbackGrid.EditRow(feedback);
+    }
+
+    async Task OnUpdateRow(Feedback feedback)
+    {
+        Reset(feedback);
+        await feedbackRepository.UpdateFeedbackAsync(feedback);
+        await GetFeedbacks();
+    }
+
+    async Task SaveRow(Feedback feedback)
+    {
+        await feedbackGrid.UpdateRow(feedback);
+    }
+
+    void CancelEdit(Feedback feedback)
+    {
+        Reset(feedback);
+        feedbackGrid.CancelEditRow(feedback);
+    }
+
+    async Task DeleteRow(Feedback feedback)
+    {
+        Reset(feedback);
+
+        if (feedbacks.Contains(feedback))
+        {
+            await feedbackRepository.DeleteFeedbackAsync(feedback.FeedbackID);
+            await GetFeedbacks();
+        }
+        else
+        {
+            feedbackGrid.CancelEditRow(feedback);
+            await feedbackGrid.Reload();
+        }
+    }
+
+    async Task InsertRow()
+    {
+        await dialogService.OpenAsync<NewFeedbackDialog>("Leave feedback");
+        await GetFeedbacks();
+    }
+
+    async Task OnCreateRow(Feedback feedback)
+    {
+        await feedbackRepository.AddFeedbackAsync(feedback);
+        feedbacksToInsert.Remove(feedback);
+        await GetFeedbacks();
+    }
+
+    public async Task OpenOrder()
+    {
+        await dialogService.OpenAsync<NewFeedbackDialog>(" ");
+        await GetFeedbacks();
+    }
+}

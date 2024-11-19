@@ -1,0 +1,114 @@
+@page "/leave-feedback"
+@using BlazorFeedBackApp.Core.Repository
+@using BlazorFeedbackApp.DAL.Models
+@using Microsoft.AspNetCore.Authorization
+@inject IFeedbackRepository repository
+@inject NotificationService notificationService
+@inject NavigationManager navigationManager
+
+<PageTitle>Leave Feedback</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <RadzenCard Style="padding: 20px;">
+                <RadzenTemplateForm TItem="Feedback" Data="@feedback" Submit="@Submit">
+                    <RadzenStack Gap="1.5rem">
+                        <RadzenText TextStyle="TextStyle.H5" TagName="TagName.H2" Class="rz-mb-4">
+                            Leave Your Feedback
+                        </RadzenText>
+
+                        <RadzenStack Gap="0.5rem">
+                            <RadzenLabel Text="Your Name" Component="CustomerName" />
+                            <RadzenTextBox Name="CustomerName"
+                                         @bind-Value="@feedback.CustomerName"
+                                         Style="width: 100%"
+                                         Placeholder="Enter your name..."
+                                         Class="rz-mb-1"
+                                         MaxLength="100"/>
+                            <RadzenRequiredValidator Component="CustomerName"
+                                                   Text="Name is required"
+                                                   Popup="true" />
+                            <RadzenLengthValidator Text="Customer Name must be less then 100 characters"
+                                                   Component="CustomerName"
+                                                   Max="100"
+                                                   Popup="true" />
+                        </RadzenStack>
+
+                        <RadzenStack Gap="0.5rem">
+                            <RadzenLabel Text="Your Feedback" Component="FeedbackMessage" />
+                            <RadzenTextArea Name="FeedbackMessage"
+                                          @bind-Value="@feedback.FeedbackMessage"
+                                          Style="width: 100%"
+                                          Rows="5"
+                                          Placeholder="Share your thoughts..."
+                                          Class="rz-mb-1"
+                                          MaxLength="500"/>
+                            <RadzenRequiredValidator Component="FeedbackMessage"
+                                                   Text="Feedback message is required"
+                                                   Popup="true" />
+                            <RadzenLengthValidator Text="Feedback Message must be less then 500 characters"
+                                                   Component="FeedbackMessage"
+                                                   Max="500"
+                                                   Popup="true" />
+                        </RadzenStack>
+
+                        <RadzenStack Orientation="Orientation.Horizontal"
+                                   JustifyContent="JustifyContent.End"
+                                   Gap="1rem"
+                                   Class="rz-mt-4">
+                            <RadzenButton Click="@(() => navigationManager.NavigateTo("/"))"
+                                        Text="Cancel"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Medium"
+                                        Variant="Variant.Flat" />
+                            <RadzenButton ButtonType="ButtonType.Submit"
+                                        Text="Submit Feedback"
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Size="ButtonSize.Medium"
+                                        Icon="send" />
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenTemplateForm>
+            </RadzenCard>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Feedback feedback { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        feedback.CustomerName = string.Empty;
+        feedback.FeedbackMessage = string.Empty;
+    }
+
+    async Task Submit()
+    {
+        try
+        {
+            await repository.AddFeedbackAsync(feedback);
+
+            notificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Success",
+                    Detail = "Thank you for your feedback!",
+                    Duration = 4000
+                });
+
+            navigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            notificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = "There was an error submitting your feedback. Please try again.",
+                    Duration = 4000
+                });
+        }
+    }
+}

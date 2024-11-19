@@ -1,0 +1,21 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@inject NavigationManager NavigationManager
+@inject IAuthorizationService AuthorizationService
+
+<PageTitle>Welcome - Feedback Portal</PageTitle>
+
+<div class="container-fluid">
+    <RadzenCard Class="rz-my-4 rz-p-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <RadzenText TextStyle="TextStyle.H3" Class="rz-mb-4">
+                    Feedback Portal
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Body1" Class="rz-mb-4">
+                    Share your thoughts and help us improve our services.
+                </RadzenText>
+            </div>
+        </div>
+    </RadzenCard>
+</div>

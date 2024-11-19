@@ -1,0 +1,44 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@inherits LayoutComponentBase
+<RadzenComponents @rendermode="InteractiveServer" />
+@inject NavigationManager NavigationManager
+@inject IAuthorizationService AuthorizationService
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <AuthorizeView>
+                <Authorized>
+                    <RadzenButton Text="Sign Out"
+                                  Icon="login"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  Class="me-2"
+                                  Click=@(() => NavigationManager.NavigateTo("/signout", true))>
+                    </RadzenButton>
+                </Authorized>
+                <NotAuthorized>
+                    <RadzenButton Text="Sign In"
+                        Icon="login"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Class="me-2" 
+                        Click=@(() => NavigationManager.NavigateTo("/MicrosoftIdentity/Account/SignIn", true))>
+                    </RadzenButton>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
